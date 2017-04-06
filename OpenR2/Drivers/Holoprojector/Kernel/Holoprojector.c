@@ -177,12 +177,14 @@ static void __exit OpenR2_exit(void){
 	return;
 }
  
-static const char mbuffer[] = "Astromech Corporation: Holoprojector\0";
+static const char mbuffer[] = "Astromech Corporation: Holoprojector";
 static ssize_t OpenR2_read(struct file *filep, char *buffer, size_t len, loff_t *offset){
   	
-	printk(KERN_INFO "%s: >> %s\n","Holoprojector",__func__);
+	int error=0;
 
-	printk(KERN_INFO "%s:    %i %u\n","Holoprojector",(int)*offset,(unsigned int)len);
+	printk(KERN_INFO "%s %d: >> %s\n","Holoprojector",iminor(filep->f_path.dentry->d_inode),__func__);
+
+	printk(KERN_INFO "%s %d:    %llu %lu\n","Holoprojector",iminor(filep->f_path.dentry->d_inode),*offset,len);
 
     	// If offset is behind the end of a file we have nothing to read
     	if( *offset >= sizeof(mbuffer))
@@ -196,44 +198,86 @@ static ssize_t OpenR2_read(struct file *filep, char *buffer, size_t len, loff_t 
         	len = sizeof(mbuffer) - *offset;
 	}
     
-	if( copy_to_user(buffer, mbuffer + *offset, len) != 0 )
+	error=copy_to_user(buffer, mbuffer + *offset, len);
+	if(error>0)
 	{
+		printk(KERN_INFO "%s %d:    %d bytes failed to send to user\n","Holoprojector",iminor(filep->f_path.dentry->d_inode),error);		
         	return(-EFAULT);
 	}    
     
-	printk(KERN_INFO "%s:    %s\n","Holoprojector",mbuffer);
+	printk(KERN_INFO "%s %d:    %s\n","Holoprojector",iminor(filep->f_path.dentry->d_inode),mbuffer);
 
 	// Move reading position
     	*offset += len;
 
-	printk(KERN_INFO "%s: << %s\n","Holoprojector",__func__);
+	printk(KERN_INFO "%s %d: << %s\n","Holoprojector",iminor(filep->f_path.dentry->d_inode),__func__);
 
 	return(len);
 }
 
+//123456789-123456789-123456789-12345
+//---------1---------2---------3
+//Hello this is a test of my function
 
+#define WMAX 10
+static char wbuffer[WMAX+1];
 static ssize_t OpenR2_write(struct file *filep, const char *buffer, size_t len, loff_t *offset){
  
-	printk(KERN_INFO "%s: >> %s\n","Holoprojector",__func__);
+	int i;
+	int bytesWritten;
+	int bytesToWrite;
+	int bytesMax;
 
+	printk(KERN_INFO "%s %d: >> %s\n","Holoprojector",iminor(filep->f_path.dentry->d_inode),__func__);
+	printk(KERN_INFO "%s %d:    %llu %lu\n","Holoprojector",iminor(filep->f_path.dentry->d_inode),*offset,len);
+
+	//
+
+	bytesMax = WMAX - *offset;
+	
+	if(bytesMax > len)
+	{
+		bytesToWrite=len;
+	} else {
+		bytesToWrite=bytesMax;
+	}
+
+	//
+
+	if(bytesToWrite == 0)
+	{
+		printk(KERN_INFO "%s %d: EOF\n","Holoprojector",iminor(filep->f_path.dentry->d_inode));
+		printk(KERN_INFO "%s %d: << %s\n","Holoprojector",iminor(filep->f_path.dentry->d_inode),__func__);
+		return(-ENOSPC);	
+	} else {
+		bytesWritten = bytesToWrite - copy_from_user(wbuffer + *offset, buffer, bytesToWrite);
+		for(i=0;i<bytesWritten;i++)
+		{
+			printk(KERN_INFO "%s %d:    %d %02X %c\n","Holoprojector",iminor(filep->f_path.dentry->d_inode),i,wbuffer[i],wbuffer[i]);		
+		}
+		printk(KERN_INFO "%s %d: << %s\n","Holoprojector",iminor(filep->f_path.dentry->d_inode),__func__);
+		return(bytesWritten);
+	}
+
+	//
  
-	printk(KERN_INFO "%s: << %s\n","Holoprojector",__func__);
+	printk(KERN_INFO "%s %d: << %s\n","Holoprojector",iminor(filep->f_path.dentry->d_inode),__func__);
   	return(-EFAULT);
 }
 
 static int OpenR2_open(struct inode *inodep, struct file *filep){
  
-	printk(KERN_INFO "%s: >> %s\n","Holoprojector",__func__);
-	printk(KERN_INFO "%s:    %d %d\n","Holoprojector",imajor(filep->f_path.dentry->d_inode),iminor(filep->f_path.dentry->d_inode));
-	printk(KERN_INFO "%s: << %s\n","Holoprojector",__func__);
+	printk(KERN_INFO "%s %d: >> %s\n","Holoprojector",iminor(filep->f_path.dentry->d_inode),__func__);
+	printk(KERN_INFO "%s %d:    %d %d\n","Holoprojector",iminor(filep->f_path.dentry->d_inode),imajor(filep->f_path.dentry->d_inode),iminor(filep->f_path.dentry->d_inode));
+	printk(KERN_INFO "%s %d: << %s\n","Holoprojector",iminor(filep->f_path.dentry->d_inode),__func__);
 
    	return(0);
 }
 
 static int OpenR2_release(struct inode *inodep, struct file *filep){
   
-	printk(KERN_INFO "%s: >> %s\n","Holoprojector",__func__);
-	printk(KERN_INFO "%s: << %s\n","Holoprojector",__func__);
+	printk(KERN_INFO "%s %d: >> %s\n","Holoprojector",iminor(filep->f_path.dentry->d_inode),__func__);
+	printk(KERN_INFO "%s %d: << %s\n","Holoprojector",iminor(filep->f_path.dentry->d_inode),__func__);
 
    	return(0);
 }
